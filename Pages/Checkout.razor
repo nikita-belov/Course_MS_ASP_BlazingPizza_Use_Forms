@@ -4,7 +4,7 @@
 @inject NavigationManager NavigationManager
 
 <div class="main">
-    <EditForm Model=Order.DeliveryAddress OnSubmit=CheckSubmission>
+    <EditForm Model=Order.DeliveryAddress OnValidSubmit=PlaceOrder OnInvalidSubmit=ShowError>
         <div class="checkout-cols">
             <div class="checkout-order-details">
                 <h4>Review order</h4>
@@ -24,6 +24,7 @@
         <button class="checkout-button btn btn-warning" disabled=@isSubmitting>
             Place order
         </button>
+        <DataAnnotationsValidator />
     </EditForm>
 </div>
 
@@ -32,26 +33,19 @@
     Order Order => OrderState.Order;
     bool isSubmitting;
 
-    private async Task CheckSubmission(EditContext editContext)
-    {
-        isSubmitting = true;
-        var model = editContext.Model as Address;
-        isError = string.IsNullOrWhiteSpace(model?.Name)
-            || string.IsNullOrWhiteSpace(model?.Line1)
-            || string.IsNullOrWhiteSpace(model?.PostalCode);
-        if (!isError)
-        {
-            await PlaceOrder();
-        }
-        isSubmitting = false;
-    }
-
     async Task PlaceOrder()
     {
-        var response = await HttpClient.PostAsJsonAsync(NavigationManager.BaseUri + "orders", OrderState.Order);
-        var newOrderId= await response.Content.ReadFromJsonAsync<int>();
+        isError = false;
+        isSubmitting = true;
+        var response = await HttpClient.PostAsJsonAsync(
+            $"{NavigationManager.BaseUri}orders", OrderState.Order);
+        var newOrderId = await response.Content.ReadFromJsonAsync<int>();
         OrderState.ResetOrder();
         NavigationManager.NavigateTo($"myorders/{newOrderId}");
-    } 
+    }
 
+    protected void ShowError()
+    {
+        isError = true;
+    }
 }
